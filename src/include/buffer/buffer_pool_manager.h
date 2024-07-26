@@ -130,7 +130,7 @@ class BufferPoolManager {
    * Decrement the pin count of a page. If the pin count reaches 0, the frame should be evictable by the replacer.
    * Also, set the dirty flag on the page to indicate if the page was modified.
    *
-   * @param page_id id of page to be unpinned
+    * @param page_id id of page to be unpinned
    * @param is_dirty true if the page should be marked as dirty, false otherwise
    * @param access_type type of access to the page, only needed for leaderboard tests.
    * @return false if the page is not in the page table or its pin count is <= 0 before this call, true otherwise
@@ -181,7 +181,7 @@ class BufferPoolManager {
   /** Array of buffer pool pages. */
   Page *pages_;
   /** Pointer to the disk sheduler. */
-  std::unique_ptr<DiskScheduler> disk_scheduler_ __attribute__((__unused__));
+  std::unique_ptr<DiskScheduler> disk_scheduler_ ;
   /** Pointer to the log manager. Please ignore this for P1. */
   LogManager *log_manager_ __attribute__((__unused__));
   /** Page table for keeping track of buffer pool pages. */
