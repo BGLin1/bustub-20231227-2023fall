@@ -27,7 +27,7 @@ namespace bustub {
 
 static constexpr uint64_t HTABLE_HEADER_PAGE_METADATA_SIZE = sizeof(uint32_t);
 static constexpr uint64_t HTABLE_HEADER_MAX_DEPTH = 9;
-static constexpr uint64_t HTABLE_HEADER_ARRAY_SIZE = 1 << HTABLE_HEADER_MAX_DEPTH;
+static constexpr uint64_t HTABLE_HEADER_ARRAY_SIZE = 1 << HTABLE_HEADER_MAX_DEPTH; //512
 
 class ExtendibleHTableHeaderPage {
  public:

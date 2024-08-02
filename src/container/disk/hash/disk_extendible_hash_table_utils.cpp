@@ -76,6 +76,7 @@ void DiskExtendibleHashTable<K, V, KC>::PrintHT() const {
 
 template <typename K, typename V, typename KC>
 void DiskExtendibleHashTable<K, V, KC>::VerifyIntegrity() const {
+  std::cout << "VerifyIntegrity Start!" << std::endl;
   BUSTUB_ASSERT(header_page_id_ != INVALID_PAGE_ID, "header page id is invalid");
   BasicPageGuard header_guard = bpm_->FetchPageBasic(header_page_id_);
   auto *header = header_guard.As<ExtendibleHTableHeaderPage>();

@@ -124,14 +124,14 @@ class DiskExtendibleHashTable {
                       uint32_t local_depth_mask);
 
   // member variables
-  std::string index_name_;
-  BufferPoolManager *bpm_;
-  KC cmp_;
-  HashFunction<K> hash_fn_;
-  uint32_t header_max_depth_;
-  uint32_t directory_max_depth_;
-  uint32_t bucket_max_size_;
-  page_id_t header_page_id_;
+  std::string index_name_; 
+  BufferPoolManager *bpm_; 
+  KC cmp_; //键比较器
+  HashFunction<K> hash_fn_; //哈希函数
+  uint32_t header_max_depth_; //header页面允许的最大深度 默认为9
+  uint32_t directory_max_depth_; //directory页面允许的最大深度 默认为9
+  uint32_t bucket_max_size_;  //bucket页面允许的最大大小
+  page_id_t header_page_id_;  
 };
 
 }  // namespace bustub

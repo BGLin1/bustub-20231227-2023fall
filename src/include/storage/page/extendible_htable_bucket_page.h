@@ -87,6 +87,8 @@ class ExtendibleHTableBucketPage {
 
   void RemoveAt(uint32_t bucket_idx);
 
+  void Clear();
+
   /**
    * @brief Gets the key at an index in the bucket.
    *
