@@ -275,16 +275,15 @@ namespace bustub {
       if (bucket_page_1->IsEmpty()) {
         bpm_->DeletePage(directory_page->GetBucketPageId(bucket_id_1));
         directory_page->SetBucketPageId(bucket_id_1, directory_page->GetBucketPageId(bucket_id_2));
-        directory_page->DecrLocalDepth(bucket_id_2);
+       
       } else {
         bpm_->DeletePage(directory_page->GetBucketPageId(bucket_id_2));
         directory_page->SetBucketPageId(bucket_id_2, directory_page->GetBucketPageId(bucket_id_1));
-        directory_page->DecrLocalDepth(bucket_id_1);
       }
+      directory_page->DecrLocalDepth(bucket_id_1);
+      directory_page->DecrLocalDepth(bucket_id_2);
       bucket_page_guard_1.Drop();
       bucket_page_guard_2.Drop();
-
-
     }
     //判断是否需要全局收缩
     while (directory_page->CanShrink()) {

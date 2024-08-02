@@ -109,7 +109,7 @@ namespace bustub {
     }
 
     ht.VerifyIntegrity();
-    std::cout << "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" << std::endl;
+
     // check that they were actually inserted
     for (int i = 0; i < num_keys; i++) {
       std::vector<int> res;
@@ -120,7 +120,7 @@ namespace bustub {
     }
 
     ht.VerifyIntegrity();
-    std::cout << "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB" << std::endl;
+    
     // try to get some keys that don't exist/were not inserted
     for (int i = num_keys; i < 2 * num_keys; i++) {
       std::vector<int> res;
@@ -130,7 +130,7 @@ namespace bustub {
     }
 
     ht.VerifyIntegrity();
-    std::cout << "CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC" << std::endl;
+    
     // remove the keys we inserted
     for (int i = 0; i < num_keys; i++) {
       bool removed = ht.Remove(i);
@@ -141,7 +141,7 @@ namespace bustub {
     }
 
     ht.VerifyIntegrity();
-    std::cout << "DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD" << std::endl;
+    
     // try to remove some keys that don't exist/were not inserted
     for (int i = num_keys; i < 2 * num_keys; i++) {
       bool removed = ht.Remove(i);
@@ -153,6 +153,7 @@ namespace bustub {
     }
 
     ht.VerifyIntegrity();
+
   }
 
 }  // namespace bustub
