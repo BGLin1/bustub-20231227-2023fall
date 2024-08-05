@@ -200,7 +200,7 @@ auto main(int argc, char **argv) -> int {  // NOLINT
     std::cerr << program;
     return 1;
   }
-
+  
   bool verbose = program.get<bool>("verbose");
   bool diff = program.get<bool>("diff");
   std::string filename = program.get<std::string>("file");

@@ -56,7 +56,13 @@ class InsertExecutor : public AbstractExecutor {
 
  private:
   /** The insert plan node to be executed*/
-  const InsertPlanNode *plan_;
+   const InsertPlanNode* plan_;
+
+   /** The child executor from which RIDs for deleted tuples are pulled */
+   std::unique_ptr<AbstractExecutor> child_executor_;
+   
+   //删除插入更新节点只需要调用一次
+   bool has_insert_;
 };
 
 }  // namespace bustub

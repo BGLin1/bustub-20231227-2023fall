@@ -22,27 +22,34 @@
 
 namespace bustub {
 
-/**
- * IndexScanExecutor executes an index scan over a table.
- */
-
-class IndexScanExecutor : public AbstractExecutor {
- public:
   /**
-   * Creates a new index scan executor.
-   * @param exec_ctx the executor context
-   * @param plan the index scan plan to be executed
+   * IndexScanExecutor executes an index scan over a table.
    */
-  IndexScanExecutor(ExecutorContext *exec_ctx, const IndexScanPlanNode *plan);
 
-  auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
+  class IndexScanExecutor : public AbstractExecutor {
+  public:
+    /**
+     * Creates a new index scan executor.
+     * @param exec_ctx the executor context
+     * @param plan the index scan plan to be executed
+     */
+    IndexScanExecutor(ExecutorContext* exec_ctx, const IndexScanPlanNode* plan);
 
-  void Init() override;
+    auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); }
 
-  auto Next(Tuple *tuple, RID *rid) -> bool override;
+    void Init() override;
 
- private:
-  /** The index scan plan node to be executed. */
-  const IndexScanPlanNode *plan_;
-};
+    auto Next(Tuple* tuple, RID* rid) -> bool override;
+
+  private:
+    /** The index scan plan node to be executed. */
+    const IndexScanPlanNode* plan_;
+
+    //自己添加的私有变量
+    HashTableIndexForTwoIntegerColumn* hash_table_;
+    bool has_scan_;
+    // 存索引找到的rid
+    std::vector<RID> rids_;
+    TableHeap* table_heap_;
+  };
 }  // namespace bustub
