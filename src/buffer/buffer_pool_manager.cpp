@@ -47,7 +47,7 @@ namespace bustub {
       replacer_->Evict(&frame_id);
     } else {
       //没有空闲的frame 也不存在可以驱逐的frame
-      cout<< "creat page error: no free frame and no evictable frame" << endl;
+      cout << "creat page error: no free frame and no evictable frame" << endl;
       return nullptr;
     }
     //确认了新page的frame_id
@@ -81,7 +81,7 @@ namespace bustub {
     //防止新创建的page被迅速驱除先标记为false (也就是pin操作)
     this->replacer_->RecordAccess(frame_id);
     this->replacer_->SetEvictable(frame_id, false);
-    
+
     cout << "New page created with page_id: " << *page_id << " in frame:" << frame_id << endl;
     return &pages_[frame_id];
   }
@@ -96,7 +96,7 @@ namespace bustub {
       this->replacer_->SetEvictable(frame_id, false);
       this->replacer_->RecordAccess(frame_id);
       this->pages_[frame_id].pin_count_++;
-      cout << "Page fetched with page_id: " << page_id << " in frame:" << frame_id << endl;
+      // cout << "Page fetched with page_id: " << page_id << " in frame:" << frame_id << endl;
       return &this->pages_[frame_id];
     }
     //frame中不存在的页
@@ -151,7 +151,7 @@ namespace bustub {
       });
     future.get();
     this->pages_[frame_id].is_dirty_ = false;
-    cout << "Page fetched with page_id: " << page_id << " in frame:" << frame_id << endl;
+    // cout << "Page fetched with page_id: " << page_id << " in frame:" << frame_id << endl;
     return &pages_[frame_id];
   }
 
@@ -173,7 +173,7 @@ namespace bustub {
       if (this->pages_[frame_id].pin_count_ == 0) {
         this->replacer_->SetEvictable(frame_id, true);
       }
-      cout << "Page unpinned with page_id: " << page_id << " in frame:" << frame_id << endl;
+      // cout << "Page unpinned with page_id: " << page_id << " in frame:" << frame_id << endl;
       return true;
     }
     return false;
@@ -254,7 +254,7 @@ namespace bustub {
   }
 
   auto BufferPoolManager::NewPageGuarded(page_id_t* page_id) -> BasicPageGuard {
-    return { this, this->NewPage(page_id)};
+    return { this, this->NewPage(page_id) };
   }
 
 }  // namespace bustub

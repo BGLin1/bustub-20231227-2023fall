@@ -82,7 +82,7 @@ namespace bustub {
             k = ++iter->second.k_;
         }
 
-        std::cout << "RecordAccess frame_id:" << frame_id << " current_timestamp_:" << current_timestamp_ << " curent_k:" << k << std::endl;
+        // std::cout << "RecordAccess frame_id:" << frame_id << " current_timestamp_:" << current_timestamp_ << " curent_k:" << k << std::endl;
 
     }
     //设置一个frame是否可被驱逐
@@ -107,7 +107,7 @@ namespace bustub {
         } else {
             if (iter->second.is_evictable_) {
                 node_store_.erase(frame_id);
-                std::cout << "Remove frame_id:" << frame_id << std::endl;
+                // std::cout << "Remove frame_id:" << frame_id << std::endl;
                 this->curr_size_--;
             } else {
                 throw bustub::Exception("remove a disevictable frame");
