@@ -82,7 +82,7 @@ namespace bustub {
     this->replacer_->RecordAccess(frame_id);
     this->replacer_->SetEvictable(frame_id, false);
 
-    cout << "New page created with page_id: " << *page_id << " in frame:" << frame_id << endl;
+    // cout << "New page created with page_id: " << *page_id << " in frame:" << frame_id << endl;
     return &pages_[frame_id];
   }
 
