@@ -69,5 +69,12 @@ class UpdateExecutor : public AbstractExecutor {
 
   //删除插入更新节点只需要调用一次
   bool has_update_;
+
+  //是否更新主键
+  bool has_pk_;
+
+  TransactionManager *txn_mgr_;
+  Transaction *txn_;
+  std::list<std::pair<RID, Tuple>> buffer_;
 };
 }  // namespace bustub

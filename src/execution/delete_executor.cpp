@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "execution/executors/delete_executor.h"
+#include "execution/execution_common.h"
 
 namespace bustub {
 
@@ -29,7 +30,8 @@ namespace bustub {
         this->has_deleted_ = false;
     }
 
-    auto DeleteExecutor::Next([[maybe_unused]] Tuple* tuple, RID* rid) -> bool {
+    //p3没有事务的版本
+ /*    auto DeleteExecutor::Next([[maybe_unused]] Tuple* tuple, RID* rid) -> bool {
         if (has_deleted_) {
             return false;
         }
@@ -51,6 +53,30 @@ namespace bustub {
         *tuple = Tuple{ {{TypeId::INTEGER,cnt}},&GetOutputSchema() };
         return true;
 
+    } */
+    //p4加入事务的版本
+    auto DeleteExecutor::Next(Tuple* tuple, RID* rid) -> bool {
+        if (has_deleted_) {
+            return false;
+        }
+        has_deleted_ = true;
+        auto table_info = this->exec_ctx_->GetCatalog()->GetTable(this->plan_->GetTableOid());
+        auto index_infos = this->exec_ctx_->GetCatalog()->GetTableIndexes(table_info->name_);
+        int cnt = 0;
+        // origin tuple schema
+        Schema schema = child_executor_->GetOutputSchema();
+        auto txn = this->exec_ctx_->GetTransaction();
+        auto txn_mgr = this->exec_ctx_->GetTransactionManager();
+        while (this->child_executor_->Next(tuple, rid)) {
+            //next返回true才是找到了这个节点目标的节点
+            cnt++;
+            auto c_rid = *rid;
+            TupleMeta old_tuple_meta = table_info->table_->GetTupleMeta(c_rid);
+            Tuple old_tuple = *tuple;
+            DeleteTuple(table_info, &schema, txn_mgr, txn, old_tuple_meta, old_tuple, c_rid);
+        }
+        *tuple = Tuple{ {{TypeId::INTEGER,cnt}},&GetOutputSchema() };
+        return true;
     }
 
 }  // namespace bustub

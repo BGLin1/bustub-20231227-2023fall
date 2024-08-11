@@ -57,5 +57,9 @@ namespace bustub {
     //表堆和表迭代器
     TableHeap* table_heap_{ nullptr };
     std::unique_ptr<TableIterator> iter_;
+
+    //找到过去版本的Tuple
+    auto RetrieveTuple(const Tuple& next_base_tuple, const TupleMeta& next_base_meta, const RID& next_rid, const Schema& schema) const
+    -> std::optional<Tuple>;
   };
 }  // namespace bustub

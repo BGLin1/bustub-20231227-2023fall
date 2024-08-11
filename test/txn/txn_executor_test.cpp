@@ -5,7 +5,7 @@ namespace bustub {
 
 // NOLINTBEGIN(bugprone-unchecked-optional-access)
 
-TEST(TxnExecutorTest, DISABLED_InsertTest) {  // NOLINT
+TEST(TxnExecutorTest,DISABLED_InsertTest) {  // NOLINT
   auto bustub = std::make_unique<BustubInstance>();
   auto empty_table = IntResult{};
   Execute(*bustub, "CREATE TABLE maintable(a int)");
@@ -186,7 +186,7 @@ TEST(TxnExecutorTest, DISABLED_InsertDeleteConflictTest) {  // NOLINT
   WithTxn(txn7, CommitTxn(*bustub, _var, _txn));
 }
 
-TEST(TxnExecutorTest, DISABLED_UpdateTest1) {  // NOLINT
+TEST(TxnExecutorTest,DISABLED_UpdateTest1) {  // NOLINT
   fmt::println(stderr, "--- UpdateTest1: no undo log ---");
   auto bustub = std::make_unique<BustubInstance>();
   auto empty_table = IntResult{};
@@ -325,7 +325,7 @@ TEST(TxnExecutorTest, DISABLED_UpdateTest2) {  // NOLINT
   TableHeapEntryNoMoreThan(*bustub, table_info, 1);
 }
 
-TEST(TxnExecutorTest, DISABLED_UpdateTestWithUndoLog) {  // NOLINT
+TEST(TxnExecutorTest, UpdateTestWithUndoLog) {  // NOLINT
   fmt::println(stderr, "--- UpdateTestWithUndoLog: update applied on a version chain with undo log ---");
   auto bustub = std::make_unique<BustubInstance>();
   auto empty_table = IntResult{};
@@ -345,9 +345,10 @@ TEST(TxnExecutorTest, DISABLED_UpdateTestWithUndoLog) {  // NOLINT
   fmt::println(stderr, "A: 1st update");
   WithTxn(txn1, ExecuteTxn(*bustub, _var, _txn, "UPDATE table2 SET b = 2"));
   TxnMgrDbg("after update", bustub->txn_manager_.get(), table_info, table_info->table_.get());
-  WithTxn(txn1, QueryShowResult(*bustub, _var, _txn, query, IntResult{{1, 2, 1}}));
-  WithTxn(txn_ref_0, QueryShowResult(*bustub, _var, _txn, query, IntResult{{0, 0, 0}}));
-  WithTxn(txn_ref_1, QueryShowResult(*bustub, _var, _txn, query, IntResult{{1, 1, 1}}));
+  WithTxn(txn1, QueryShowResult(*bustub, _var, _txn, query, IntResult{ {1, 2, 1} }));
+  WithTxn(txn_ref_0, QueryShowResult(*bustub, _var, _txn, query, IntResult{ {0, 0, 0} }));
+  
+  WithTxn(txn_ref_1, QueryShowResult(*bustub, _var, _txn, query, IntResult{ {1, 1, 1} }));
   WithTxn(txn1, CheckUndoLogColumn(*bustub, _var, _txn, 1));
   fmt::println(stderr, "B: 2nd update");
   WithTxn(txn1, ExecuteTxn(*bustub, _var, _txn, "UPDATE table2 SET b = 3"));

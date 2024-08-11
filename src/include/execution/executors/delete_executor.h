@@ -56,6 +56,7 @@ namespace bustub {
     auto GetOutputSchema() const -> const Schema & override { return plan_->OutputSchema(); };
 
   private:
+   
     /** The delete plan node to be executed */
     const DeletePlanNode* plan_;
 

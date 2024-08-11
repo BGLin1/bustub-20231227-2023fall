@@ -12,6 +12,8 @@
 #include <memory>
 
 #include "execution/executors/update_executor.h"
+#include "execution/execution_common.h"
+
 
 namespace bustub {
 
@@ -25,10 +27,23 @@ namespace bustub {
   void UpdateExecutor::Init() {
     this->child_executor_->Init();
     this->has_update_ = false;
+    table_info_ = GetExecutorContext()->GetCatalog()->GetTable(plan_->GetTableOid());
+    buffer_.clear();
+    txn_mgr_ = exec_ctx_->GetTransactionManager();
+    txn_ = exec_ctx_->GetTransaction();
+    Tuple old_tuple{};
+    RID rid;
+    while (child_executor_->Next(&old_tuple, &rid)) {
+      // use buffered old tuple because Visibility is guaranteed by the child executor
+      if (rid.GetPageId() != INVALID_PAGE_ID) {
+        buffer_.emplace_back(rid, old_tuple);
+      }
+    }
   }
 
+  //p3没有事务的版本
   //总体的思路:删除tuple再插入tuple
-  auto UpdateExecutor::Next([[maybe_unused]] Tuple* tuple, RID* rid) -> bool {
+/*   auto UpdateExecutor::Next([[maybe_unused]] Tuple* tuple, RID* rid) -> bool {
     if (has_update_) {
       return false;
     }
@@ -59,6 +74,45 @@ namespace bustub {
       }
     }
     *tuple = Tuple{ {{TypeId::INTEGER,cnt}},&GetOutputSchema() };
+    return true;
+  } */
+  //p4有事务的版本
+  auto UpdateExecutor::Next(Tuple* tuple, RID* rid) -> bool {
+   
+    if (this->has_update_) {
+      return false;
+    }
+    has_update_ = true;
+    Tuple old_tuple{};
+    TupleMeta old_tuple_meta;
+    RID temp_rid;
+    int update_num = 0;
+
+    std::vector<IndexInfo*> indexes = exec_ctx_->GetCatalog()->GetTableIndexes(table_info_->name_);
+    const Schema* schema = &child_executor_->GetOutputSchema();
+    const TupleMeta new_tuple_meta = TupleMeta{ txn_->GetTransactionTempTs(), false };
+    std::vector<Value> values;
+    values.reserve(schema->GetColumnCount());
+    while (!buffer_.empty()) {
+      values.clear();
+      auto tuple_pair = buffer_.front();
+      temp_rid = tuple_pair.first;
+      old_tuple = std::move(tuple_pair.second);
+      buffer_.pop_front();
+      old_tuple_meta = table_info_->table_->GetTupleMeta(temp_rid);
+      // update column values according to expressions
+      for (const auto& expr : plan_->target_expressions_) {
+        values.push_back(expr->Evaluate(&old_tuple, *schema));
+      }
+      // 更新完毕的新tuple
+      Tuple new_tuple = Tuple(values, schema);
+      UpdateTuple(table_info_, schema, txn_mgr_, txn_, old_tuple_meta, old_tuple, new_tuple_meta, new_tuple, temp_rid);
+      ++update_num;
+    }
+    if (update_num == 0) {
+      return false;
+    }
+    *tuple = Tuple{ {{TypeId::INTEGER,update_num}},&GetOutputSchema() };
     return true;
   }
 

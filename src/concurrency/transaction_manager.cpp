@@ -55,8 +55,6 @@ auto TransactionManager::Commit(Transaction *txn) -> bool {
   std::unique_lock<std::mutex> commit_lck(commit_mutex_);
 
   // TODO(fall2023): acquire commit ts!
-  auto commit_ts = this->last_commit_ts_.load(); 
-
   if (txn->state_ != TransactionState::RUNNING) {
     throw Exception("txn not in running state");
   }
@@ -74,10 +72,24 @@ auto TransactionManager::Commit(Transaction *txn) -> bool {
   std::unique_lock<std::shared_mutex> lck(txn_map_mutex_);
 
   // TODO(fall2023): set commit timestamp + update last committed timestamp here.
-  txn->commit_ts_ = commit_ts + 1;
-  this->last_commit_ts_++;
-  
+  txn->commit_ts_ = ++last_commit_ts_;
   txn->state_ = TransactionState::COMMITTED;
+   //根据事件的 write set 修改所有被影响到的tuple的时间戳
+  for (auto& [tid, set] : txn->write_set_) {
+    // 一张表内的所有写过的tuple
+    for (auto& rid : set) {
+      auto table_info = catalog_->GetTable(tid);
+      if (table_info == Catalog::NULL_TABLE_INFO) {
+        throw Exception{"Invalid table id"};
+      }
+      //根据RID找到对应的meta
+      auto& table = table_info->table_;
+      auto meta = table->GetTupleMeta(rid);
+      meta.ts_ = txn->commit_ts_;
+      //修改meta
+      table->UpdateTupleMeta(meta, rid);
+    }
+  }
   running_txns_.UpdateCommitTs(txn->commit_ts_);
   running_txns_.RemoveTxn(txn->read_ts_);
 
