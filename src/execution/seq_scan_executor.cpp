@@ -55,68 +55,74 @@ namespace bustub {
 
     //     return true; 
         // p4:引入事务的代码
-        while (rid_iter_ != rids_.end()) {
-            const auto next_rid = *rid_iter_;
-            const auto [next_base_meta, next_base_tuple] = table_heap_->GetTuple(next_rid);
-            rid_iter_++;
-            //判断当前tuple是否满足plan中的筛选条件
-            if (plan_->filter_predicate_ && !plan_->filter_predicate_->Evaluate(&next_base_tuple, plan_->OutputSchema()).GetAs<bool>()) {
-                LOG_TRACE("Failed to get tuple %s due to dissatisfy conditions", next_tuple.ToString(&output_schema).c_str());
-                continue;
-            }
-            // 判断当前tuple对是否满足事务可见性
-            const auto reconstructed_tuple = RetrieveTuple(next_base_tuple, next_base_meta, next_rid, plan_->OutputSchema());
-            if (!reconstructed_tuple.has_value()) {
-                continue;
-            }
-            *tuple = *reconstructed_tuple;
-            *rid = next_rid;
-            LOG_TRACE("Succeed in getting tuple %s, RID %s in sequential scan.", tuple->ToString(&output_schema).c_str(),
-                rid->ToString().c_str());
-            return true;
-        }
-        return false;
-    }
 
-    auto SeqScanExecutor::RetrieveTuple(const Tuple& next_base_tuple, const TupleMeta& next_base_meta, const RID& next_rid, const Schema& schema) const -> std::optional<Tuple> {
-
-        auto* transaction_manager = exec_ctx_->GetTransactionManager();
-        const auto* transaction = exec_ctx_->GetTransaction();
-        //tuple的时间戳等于当前事务id 或时间戳小于当前读时间戳
-        if (transaction->GetReadTs() >= next_base_meta.ts_ || transaction->GetTransactionTempTs() == next_base_meta.ts_) {
-            //再判断当前tuple是不是被删除的
-            if (next_base_meta.is_deleted_) {
-                return std::nullopt;
-            } else {
-                return next_base_tuple;
+        bool is_find = false;
+        do {
+            is_find = false;
+            if (this->rid_iter_ == this->rids_.end()) {
+                return false;
             }
-        }
-        //如果不满足 进入 从undolog中找满足的tuple
-        std::vector<UndoLog> undo_logs;
-        std::optional<UndoLink> undo_link_optional = this->exec_ctx_->GetTransactionManager()->GetUndoLink(next_rid);
-        if (undo_link_optional.has_value()) {
-            while (undo_link_optional.has_value() && undo_link_optional.value().IsValid()) {
-                const auto undo_log_optional = transaction_manager->GetUndoLogOptional(undo_link_optional.value());
-                if (undo_log_optional.has_value()) {
-                    auto undo_log = undo_log_optional.value();
-                    if (undo_log.ts_ >= transaction->GetReadTs()) {
-                        //找到第一个时间戳小于当前读时间戳的log
-                        undo_logs.push_back(undo_log);
-                    } else {
-                        break;
-                    }
-                    undo_link_optional = undo_log_optional.value().prev_version_;
-                } else {
-                    break;
+            const std::pair<TupleMeta, Tuple>& tuple_pair = table_heap_->GetTuple(*rid_iter_);
+            auto txn = this->exec_ctx_->GetTransaction();
+            auto txn_mgr = this->exec_ctx_->GetTransactionManager();
+            //tuple是当前事务临时插入的tuple
+            if (tuple_pair.first.ts_ == txn->GetTransactionTempTs()) {
+                if (tuple_pair.first.is_deleted_) {
+                    // is delete by this txn, can't read by this txn
+                    rid_iter_++;
+                    continue;
                 }
+                // is modifying by this txn
+                *tuple = tuple_pair.second;
+                *rid = tuple->GetRid();
+                is_find = true;
+            } else {
+                //tuple不是当前事务临时插入的tuple 
+                timestamp_t txn_ts = txn->GetReadTs();
+                timestamp_t tuple_ts = tuple_pair.first.ts_;
+                std::vector<UndoLog> undo_logs;
 
+                // tuple的时间戳大于事务时间戳 需要检查undolog
+                if (txn_ts < tuple_ts) {
+                    std::optional<UndoLink> undo_link_optional = txn_mgr->GetUndoLink(tuple_pair.second.GetRid());
+                    std::optional<UndoLog> undo_log_optional = txn_mgr->GetUndoLogOptional(undo_link_optional.value());
+                    if (undo_link_optional.has_value()) {
+                        while (undo_log_optional.has_value() && undo_link_optional.value().IsValid()) {
+                            undo_log_optional = txn_mgr->GetUndoLogOptional(undo_link_optional.value());
+                            if (undo_log_optional.has_value()) {
+                                //找到第一个tuple时间戳小于等于事务时间戳的
+                                if (txn_ts >= undo_log_optional.value().ts_) {
+                                    undo_logs.push_back(std::move(undo_log_optional.value()));
+                                    //根据undologs重构tuple
+                                    std::optional<Tuple> res_tuple_optional =
+                                        ReconstructTuple(&GetOutputSchema(), tuple_pair.second, tuple_pair.first, undo_logs);
+                                    if (res_tuple_optional.has_value()) {
+                                        *tuple = res_tuple_optional.value();
+                                        *rid = tuple_pair.second.GetRid();
+                                        is_find = true;
+                                    }
+                                    break;
+                                }
+                                //否则把当前的log插入undolog中
+                                undo_logs.push_back(std::move(undo_log_optional.value()));
+                                undo_link_optional = undo_log_optional.value().prev_version_;
+                            }
 
+                        }
+                    }
+                } else {
+                    // return tuple in table heap directly
+                    if (!tuple_pair.first.is_deleted_) {
+                        is_find = true;
+                        *tuple = tuple_pair.second;
+                        *rid = tuple->GetRid();
+                    }
+                }
             }
-        }
-
-        if (undo_logs.empty()) {
-            return std::nullopt;
-        }
-        return ReconstructTuple(&schema, next_base_tuple, next_base_meta, undo_logs);
+            rid_iter_++;
+        } while (!is_find || (plan_->filter_predicate_ &&
+            !(plan_->filter_predicate_->Evaluate(tuple, plan_->OutputSchema()).GetAs<bool>())));
+        return true;
     }
 }  // namespace bustub
+

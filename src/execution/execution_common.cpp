@@ -163,7 +163,7 @@ namespace bustub {
       tuple_os << fmt::format("RID={}/{} ", rid.GetPageId(), rid.GetSlotNum());
       if ((ts & TXN_START_ID) != 0) {
         // ts is a txn id (还未提交的tuple)
-        tuple_os << fmt::format("txn name = {} ", ts ^ TXN_START_ID);
+        tuple_os << fmt::format("txn id = {} ", ts ^ TXN_START_ID);
       } else {
         // ts is timestamp (已经提交的tuple)
         tuple_os << fmt::format("timestamp={} ", ts);
@@ -299,7 +299,7 @@ namespace bustub {
     return { values, schema };
   }
 
-  // 合并一个事务的两次修改的undolog
+  // 更新/删除操作中 根据当前tulpe的undolog生成新的tuple
   /* undolog:
       is_deleted_
       modified_fields_
@@ -312,14 +312,14 @@ namespace bustub {
     std::vector<Value> values;
     UndoLog undo_log;
     undo_log.ts_ = old_tuple_meta.ts_;
-    // 老的tuple已经是删除状态了 后一次操作没有意义 
+    // 老的tuple已经是删除状态了 后一次操作直接返回时间戳和删除标记
     if (old_tuple_meta.is_deleted_) {
       undo_log.is_deleted_ = true;
       return undo_log;
     }
-    //老的tuple不是被删除
+    //老的tuple不是被删除状态
     undo_log.is_deleted_ = false;
-    //第二次操作是一个删除操作,undolog要记录原来的tuple的所有值
+    //新操作是一个删除操作,undolog要记录原来的tuple的所有值
     if (new_tuple_meta.is_deleted_) {
       undo_log.modified_fields_ = std::vector<bool>(sz, true);
       for (uint32_t i = 0; i < sz; ++i) {
@@ -330,11 +330,7 @@ namespace bustub {
       //新老tuple都不是被删除状态
       //合并两次tuple的更改
       undo_log.modified_fields_ = std::vector<bool>(sz, false);
-      // std::cerr << old_tuple.ToString(schema) << std::endl;
-      // std::cerr << new_tuple.ToString(schema) << std::endl;
       for (uint32_t i = 0; i < sz; ++i) {
-        // std::cerr << i << " old tuple value " << old_tuple.GetValue(schema, i).ToString() << std::endl;
-        // std::cerr << i << " new tuple value " << new_tuple.GetValue(schema, i).ToString() << std::endl;
         if (!(old_tuple.GetValue(schema, i).CompareExactlyEquals(new_tuple.GetValue(schema, i)))) {
           values.push_back(old_tuple.GetValue(schema, i));
           undo_log.modified_fields_[i] = true;
@@ -481,7 +477,7 @@ namespace bustub {
         UndoLog temp_undo_log = GenerateDiffLog(old_tuple, old_tuple_meta, new_tuple, new_tuple_meta, schema);
 
         UndoLog old_undo_log = txn_mgr->GetUndoLogOptional(undo_link_optional.value()).value();
-        
+
         temp_undo_log.prev_version_ = old_undo_log.prev_version_;
         UndoLog merged_undo_log = MergeUndoLog(temp_undo_log, old_undo_log, schema);
         txn->ModifyUndoLog(undo_link_optional.value().prev_log_idx_, merged_undo_log);
@@ -490,10 +486,13 @@ namespace bustub {
       // LockAndCheck(rid, txn_mgr, txn, table_info);
       //判断写写冲突
       if (IsWriteWriteConflict(txn, table_info->table_->GetTupleMeta(rid))) {
+        auto version_link_optional = txn_mgr->GetVersionLink(rid);
+        txn_mgr->UpdateVersionLink(rid, VersionUndoLink{ version_link_optional->prev_, false }, nullptr);
+        MyAbort(txn);
         return;
       }
       std::optional<UndoLink> undo_link_optional = txn_mgr->GetUndoLink(rid);
-      // 生成新的new undo log
+      // 生成新的undo log
       UndoLog new_undo_log = GenerateDiffLog(old_tuple, old_tuple_meta, new_tuple, new_tuple_meta, schema);
       new_undo_log.prev_version_ = *undo_link_optional;
       UndoLink new_undo_link = txn->AppendUndoLog(new_undo_log);
@@ -523,16 +522,19 @@ namespace bustub {
     } else {
       //no self-modification
       //在这里判断加锁和写写冲突
-      LockAndCheck(rid, txn_mgr, txn, table_info);
-
+      // LockAndCheck(rid, txn_mgr, txn, table_info);
+      if (IsWriteWriteConflict(txn, table_info->table_->GetTupleMeta(rid))) {
+        auto version_link_optional = txn_mgr->GetVersionLink(rid);
+        txn_mgr->UpdateVersionLink(rid, VersionUndoLink{ version_link_optional->prev_, false }, nullptr);
+        MyAbort(txn);
+        return;
+      }
       std::optional<UndoLink> undo_link_optional = txn_mgr->GetUndoLink(rid);
       //生成新的new undo log
-      // UndoLog temp_undo_log = GenerateDiffLog(delete_tuple, old_tuple_meta, Tuple{}, new_tuple_meta, schema);
-      UndoLog old_undo_log = txn_mgr->GetUndoLog(undo_link_optional.value());
-      UndoLog new_undo_log;
-      new_undo_log.is_deleted_ = true;
-      new_undo_log.modified_fields_ = old_undo_log.modified_fields_;
-      new_undo_log.prev_version_ = undo_link_optional.value();
+      UndoLog new_undo_log = GenerateDiffLog(delete_tuple, old_tuple_meta, Tuple{}, new_tuple_meta, schema);
+      if (undo_link_optional.has_value()) {
+        new_undo_log.prev_version_ = undo_link_optional.value();
+      }
       UndoLink new_undo_link = txn->AppendUndoLog(new_undo_log);
       txn_mgr->UpdateVersionLink(rid, VersionUndoLink{ new_undo_link, true }, nullptr);
     }
